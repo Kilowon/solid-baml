@@ -1,22 +1,16 @@
 import { createSignal, createEffect, createResource, Show, Suspense, startTransition } from "solid-js"
-import { isServer } from "solid-js/web"
-import { b } from "~/../baml_client"
+import { b } from "~/../baml_client/index.js"
 import type { Resume } from "~/../baml_client/types"
-import { For } from "solid-js"
 
-// Define the server function using "use server"
-// It remains async and takes the same arguments
 async function extractResumeServer(text: string): Promise<Resume> {
-	"use server" // Add this directive as the first line
+	"use server"
 	console.log("[SERVER FN] Attempting to extract resume...")
 	try {
-		// This code ONLY runs on the server thanks to "use server"
 		const result = await b.ExtractResume(text)
 		console.log("[SERVER FN] BAML extraction successful.")
 		return result
 	} catch (error) {
 		console.error("[SERVER FN] BAML extraction failed:", error)
-		// Re-throw or handle the error appropriately for the resource
 		throw error
 	}
 }
@@ -36,52 +30,30 @@ export default function BamlResume() {
       - C++
     `)
 
-	// Mock data to use when API fails
-	const mockResumeData: Resume = {
-		name: "not found",
-		email: "not found",
-		experience: ["not found"],
-		skills: ["not found"]
-	}
-
-	// Add this near the top of your component to debug
 	const [apiKeyStatus, setApiKeyStatus] = createSignal("Checking API key...")
 	const [clientSideMode, setClientSideMode] = createSignal(false)
 
-	// Resource ALWAYS calls the server function via RPC when run on client
-	const [resume, { refetch }] = createResource(
-		// Source can just be the text now, trigger isn't needed for the fetcher logic
-		resumeText,
-		async text => {
-			console.log("[RESOURCE FETCHER] Calling extractResumeServer (will use RPC if on client)...")
-			try {
-				// This call works whether it's initial load (SSR or client) or refetch.
-				// SolidStart handles making it an RPC call from client to server.
-				const result = await extractResumeServer(text)
-				console.log("[RESOURCE FETCHER] extractResumeServer successful.")
-				return result
-			} catch (error) {
-				console.error("[RESOURCE FETCHER] Error calling extractResumeServer:", error)
-				// Re-throw error so resume.error is populated
-				throw error
-			}
+	const [resume, { refetch }] = createResource(resumeText, async text => {
+		console.log("[RESOURCE FETCHER] Calling extractResumeServer (will use RPC if on client)...")
+		try {
+			const result = await extractResumeServer(text)
+			console.log("[RESOURCE FETCHER] extractResumeServer successful.")
+			return result
+		} catch (error) {
+			console.error("[RESOURCE FETCHER] Error calling extractResumeServer:", error)
+			throw error
 		}
-	)
+	})
 
-	// Add immediate logging when component mounts
 	console.log("Counter component initialized")
 
-	// More detailed effect logging
 	createEffect(() => {
 		console.log(`[EFFECT] Resume resource state changed:`)
 		console.log(`[EFFECT]   Loading:`, resume.loading)
 		console.log(`[EFFECT]   Error:`, resume.error)
-		// Log the raw value first
 		const rawData = resume()
 		console.log(`[EFFECT]   Raw Data Value:`, rawData)
-		// Access data safely
 		try {
-			// Keep the previous log too
 			console.log(`[EFFECT]   Data accessed via resume():`, resume())
 		} catch (e) {
 			console.log(`[EFFECT]   Data: (Error accessing data)`, e)
@@ -92,7 +64,6 @@ export default function BamlResume() {
 		}
 	})
 
-	// Handlers now wrap refetch in startTransition
 	const handleClientRefetch = () => {
 		console.log("[HANDLER] handleClientRefetch called")
 		setClientSideMode(true)
@@ -116,7 +87,6 @@ export default function BamlResume() {
 			<h1 class="text-2xl font-bold text-gray-800">BAML Resume Extractor (Client/Server RPC)</h1>
 
 			<div class="flex gap-4">
-				{/* Server Refetch Button */}
 				<button
 					class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:opacity-50"
 					onClick={handleServerRefetch}
@@ -125,7 +95,6 @@ export default function BamlResume() {
 					{resume.loading && !clientSideMode() ? "Processing..." : "Refetch Resume (Server Fn)"}
 				</button>
 
-				{/* Client Refetch Button - Name is now slightly misleading, but keeps UI consistent */}
 				<button
 					class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors disabled:opacity-50"
 					onClick={handleClientRefetch}

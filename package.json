@@ -8,7 +8,7 @@
 		"start": "vinxi start"
 	},
 	"dependencies": {
-		"@boundaryml/baml": "^0.81.3",
+		"@boundaryml/baml": "^0.85.0",
 		"@solidjs/router": "^0.15.0",
 		"@solidjs/start": "^1.1.0",
 		"@unocss/reset": "^0.65.1",
